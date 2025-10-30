@@ -17,7 +17,7 @@ public:
     MapPublisherNode() : Node("map_publisher_node"), tf_broadcaster_(this)
     {
         // 声明参数：地图PCD文件路径
-        this->declare_parameter<std::string>("map_pcd_path","/assets/pcd_maps/cloud_1761624483.136961_1761624483136.pcd");
+        this->declare_parameter<std::string>("map_pcd_path","assets/pcd_maps/cloud_1761624483.136961_1761624483136.pcd");
 
         // 声明参数： 发布频率
         this->declare_parameter<int>("publish_frequency",1);
