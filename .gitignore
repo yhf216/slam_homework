@@ -1,0 +1,12 @@
+/.vscode/
+/.cache/
+/build/
+/install/
+/log/
+/bag/
+/assets/pcd_maps/
+/kernel.errors.txt
+.DS_Store
+example.webm
+record.sh
+replay.sh
