@@ -12,6 +12,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED) 
 find_package(pcl_conversions REQUIRED)
 find_package(PCL 1.12 REQUIRED) 
 
@@ -40,6 +41,7 @@ ament_target_dependencies(relocalization_node
   nav_msgs
   geometry_msgs
   tf2_ros
+  tf2_eigen
   pcl_conversions
 )
 target_link_libraries(relocalization_node ${PCL_LIBRARIES})  # 链接PCL库

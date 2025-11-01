@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 class MapPublisherNode : public rclcpp::Node
 {
 public:
-    MapPublisherNode() : Node("map_publisher_node"), tf_broadcaster_(this)
+    MapPublisherNode() : Node("map_publisher_node")
     {
         // 声明参数：地图PCD文件路径
         this->declare_parameter<std::string>("map_pcd_path","assets/pcd_maps/cloud_1761624483.136961_1761624483136.pcd");
@@ -44,8 +44,9 @@ public:
             return;
         }
 
-        // 初始化地图发布者（话题名：/static_pointcloud_map）
-        map_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/static_pointcloud_map", 10);
+        // 初始化地图发布者（/static_pointcloud_map ,用于RViz显示 ；/map_for_navigation ,用于导航）
+        map_for_rviz_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/static_pointcloud_map", 10);
+        map_for_nav_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/map_for_navigation", 10);
 
         // 初始化定时器
         publish_timer_ = this->create_wall_timer(
@@ -55,7 +56,9 @@ public:
 
         RCLCPP_INFO(this->get_logger(), "地图发布节点启动成功");
         RCLCPP_INFO(this->get_logger(), "加载的PCD文件: %s", pcd_path.c_str());
-        RCLCPP_INFO(this->get_logger(), "发布话题: /static_pointcloud_map（坐标系: odom_init）");
+        RCLCPP_INFO(this->get_logger(), "发布话题: /static_pointcloud_map");
+        RCLCPP_INFO(this->get_logger(), "发布话题: /map_for_navigation");
+
         RCLCPP_INFO(this->get_logger(), "发布频率: %d Hz", frequency);
 
     }
@@ -89,53 +92,46 @@ private:
         RCLCPP_INFO_ONCE(this->get_logger(), "点云过滤完成，过滤后点数: %zu", filtered_cloud_->size());  
     }
     
-    // 发布点云和TF
+    // 将PCL点云转换为ROS消息并发布
+    void publishCloud(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud,
+        rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr& pub,
+        const std::string& frame_id,
+        const std::string& topic_name)
+    {
+        if (!cloud || cloud->empty()) {
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
+                            "点云为空，跳过发布到话题: %s", topic_name.c_str());
+            return;
+        }
+        sensor_msgs::msg::PointCloud2 ros_cloud;
+        pcl::toROSMsg(*cloud, ros_cloud);
+        ros_cloud.header.frame_id = frame_id;
+        ros_cloud.header.stamp = this->get_clock()->now();
+        pub->publish(ros_cloud);
+    }
+
+    // 发布两个话题
     void publishMap()
     {
-        // 首次发布时过滤
-        if (filtered_cloud_ == nullptr || filtered_cloud_->empty()){
+        // 首次发布时执行过滤
+        if (!filtered_cloud_ || filtered_cloud_->empty()) {
             filterZAxis();
         }
 
-        // 转换并发布
-        sensor_msgs::msg::PointCloud2::SharedPtr ros_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-        pcl::toROSMsg(*filtered_cloud_, *ros_cloud);
-        ros_cloud->header.frame_id = "odom_init";
-        ros_cloud->header.stamp = this->get_clock()->now();
-        map_pub_->publish(*ros_cloud);
+        // 发布过滤后的点云（RViz用）
+        publishCloud(filtered_cloud_, map_for_rviz_, "map", "/static_pointcloud_map");
 
-        // 发布odom_init->map的TF（让RViz识别odom_init坐标系）
-        publishTF();
-    }
-
-    // 发布TF变换（odom_init与map重合，方便RViz显示）
-    void publishTF()
-    {
-        geometry_msgs::msg::TransformStamped transform;
-        transform.header.stamp = this->get_clock()->now();
-        transform.header.frame_id = "map";  // 父坐标系（RViz常用固定坐标系）
-        transform.child_frame_id = "odom_init";  // 子坐标系（点云坐标系）
-
-        // 平移：无偏移（odom_init与map重合）
-        transform.transform.translation.x = 0.0;
-        transform.transform.translation.y = 0.0;
-        transform.transform.translation.z = 0.0;
-
-        // 旋转：无旋转（四元数表示单位旋转）
-        transform.transform.rotation.x = 0.0;
-        transform.transform.rotation.y = 0.0;
-        transform.transform.rotation.z = 0.0;
-        transform.transform.rotation.w = 1.0;
-
-        tf_broadcaster_.sendTransform(transform);
+        // 发布未过滤的点云（导航用）
+        publishCloud(original_cloud_, map_for_nav_, "map", "/map_for_navigation");
     }
 
     // 成员变量
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_for_rviz_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_for_nav_;
     rclcpp::TimerBase::SharedPtr publish_timer_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr original_cloud_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud_;
-    tf2_ros::TransformBroadcaster tf_broadcaster_;
 };
 
 
