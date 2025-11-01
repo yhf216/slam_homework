@@ -89,4 +89,11 @@ colcon build --packages-select map_publisher relocalization
     - 位置：上一时刻占80%权重，当前位置占20%权重
 - 其他说明
   - 重定位算法部分很多不会，都是copilot在发力。
+  - 各个包运行效果参考下图：
+  - normal
+  - ![alt text](assets/README/normal.jpg)
+  - hard
+  - ![alt text](assets/README/hard.jpg)
+  - lunatic
+  - ![alt text](assets/README/lunatic.jpg)
     
