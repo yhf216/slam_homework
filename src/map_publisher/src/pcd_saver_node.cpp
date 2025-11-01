@@ -115,4 +115,6 @@ int main(int argc, char **argv)
     rclcpp::shutdown();
     return 0;
 }
-//ros2 service call /save_pcd std_srvs/srv/Empty "{}" //触发保存
+
+//触发保存
+//ros2 service call /save_pcd std_srvs/srv/Empty "{}" 

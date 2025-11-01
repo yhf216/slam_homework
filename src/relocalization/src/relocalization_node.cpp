@@ -416,3 +416,6 @@ int main(int argc, char**argv)
     rclcpp::shutdown();
     return 0;
 }
+
+//手动触发重定位
+//ros2 param set /relocalization_node manual_relocalize true 
